@@ -3,86 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Kanban - Bem-Estar</title>
+    <title>Painel de Gestão - Bem-Estar</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f0fa; margin: 0; padding: 20px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f0fa; margin: 0; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Cabeçalho */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .header-logos { display: flex; gap: 15px; align-items: center; }
-        .header-logos img { max-height: 50px; }
-        .btn-nova-coluna { background: #6b21a8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        /* Menu Lateral (Sidebar) */
+        .sidebar { width: 250px; background: #4c1d95; color: white; display: flex; flex-direction: column; padding: 20px 0; }
+        .sidebar-logo { text-align: center; margin-bottom: 30px; padding: 0 20px; }
+        .sidebar-logo img { max-height: 50px; background: white; padding: 5px; border-radius: 8px; margin-bottom: 10px; }
+        .menu-item { padding: 15px 25px; cursor: pointer; font-size: 1.1em; border-left: 4px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background: #5b21b6; }
+        .menu-item.active { background: #3b0764; border-left: 4px solid #c084fc; font-weight: bold; }
+
+        /* Área Principal */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #e9d5ff; }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Botões Gerais */
+        .btn { background: #6b21a8; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #5b21b6; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8em; border-radius: 4px; margin-left: 5px; background: #e9d5ff; color: #4c1d95; }
+        .btn-sm:hover { background: #d8b4fe; }
 
         /* Kanban Board */
-        .kanban-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; min-height: 80vh; }
-        
+        .kanban-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; min-height: 70vh; }
         .kanban-column { background: #ffffff; border-radius: 12px; width: 320px; min-width: 320px; padding: 15px; box-shadow: 0 2px 10px rgba(107, 33, 168, 0.05); border-top: 4px solid #9333ea; display: flex; flex-direction: column; }
-        .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; color: #4c1d95; font-size: 1.1em; }
-        .column-count { background: #f3e8ff; color: #7e22ce; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+        .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; color: #4c1d95; }
+        .col-actions { display: flex; }
         .kanban-cards { min-height: 100px; flex-grow: 1; display: flex; flex-direction: column; gap: 10px; }
 
-        /* Cards */
+        /* Cards Kanban */
         .kanban-card { background: #ffffff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.1s; border-left: 4px solid #c084fc; }
         .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(107, 33, 168, 0.1); }
-        .card-title { font-weight: bold; color: #2e1065; font-size: 1em; margin-bottom: 5px; }
-        .card-subtitle { font-size: 0.8em; color: #6b7280; display: flex; justify-content: space-between; align-items: center; margin-top: 8px;}
+        .card-title { font-weight: bold; color: #2e1065; margin-bottom: 5px; }
         .card-tag { font-size: 0.75em; color: #6b21a8; background: #faf5ff; padding: 3px 6px; border-radius: 4px; }
 
-        /* Modal (Print 02) */
+        /* Dashboard */
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .dash-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e9d5ff; }
+        .dash-number { font-size: 2.5em; font-weight: bold; color: #6b21a8; margin: 10px 0; }
+        .chart-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9d5ff; height: 300px; display: flex; justify-content: center; }
+
+        /* Lista de Resolvidos */
+        .lista-resolvidos { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .lista-resolvidos th, .lista-resolvidos td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+        .lista-resolvidos th { background: #f9fafb; color: #4b5563; font-weight: bold; }
+        .lista-resolvidos tr:hover { background: #fdfafb; cursor: pointer; }
+
+        /* Modal (Reaproveitado) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 500px; max-width: 90%; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
-        .close-modal { position: absolute; top: 15px; right: 15px; background: #f3e8ff; color: #7e22ce; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
-        
-        .modal-header { background: #faf5ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e9d5ff; }
-        .modal-title { font-size: 1.4em; color: #4c1d95; font-weight: bold; margin: 0 0 5px 0; }
-        .modal-category { color: #6b21a8; font-size: 0.9em; font-weight: bold; }
-        
-        .modal-body { color: #4b5563; line-height: 1.5; font-size: 0.95em; margin-bottom: 20px; white-space: pre-wrap; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;}
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e5e7eb; padding-top: 15px; }
-        
-        .btn-analisado { background: #16a34a; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .btn-analisado:hover { background: #15803d; }
+        .modal-content { background: white; width: 500px; max-width: 90%; border-radius: 12px; padding: 25px; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 15px; background: #f3e8ff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+        .modal-body { white-space: pre-wrap; background: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #e5e7eb;}
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="header-logos">
-        <img src="logo-prefeitura.png" alt="Prefeitura">
-        <img src="logo-secretaria.png" alt="Secretaria">
-        <h2 style="margin: 0; color: #4c1d95; margin-left: 15px;">Painel de Demandas</h2>
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <img src="logo-secretaria.png" alt="Secretaria" onerror="this.style.display='none'">
+        <div style="font-size: 1.2em; font-weight: bold; margin-top: 10px;">Gestão Bem-Estar</div>
     </div>
-    <button class="btn-nova-coluna" onclick="adicionarColunaPrompt()">+ Nova Coluna</button>
+    <div class="menu-item active" onclick="mudarAba('kanban')">📋 Quadro Kanban</div>
+    <div class="menu-item" onclick="mudarAba('dashboard')">📊 Dashboard</div>
+    <div class="menu-item" onclick="mudarAba('resolvidos')">✅ Casos Resolvidos</div>
 </div>
 
-<div class="kanban-board" id="board">
+<div class="main-content">
+    
+    <div id="view-kanban" class="view-section active">
+        <div class="header">
+            <h2 style="margin:0; color: #4c1d95;">Acompanhamento de Demandas</h2>
+            <button class="btn" onclick="adicionarColunaPrompt()">+ Nova Coluna</button>
+        </div>
+        <div class="kanban-board" id="board">
+            </div>
     </div>
+
+    <div id="view-dashboard" class="view-section">
+        <div class="header">
+            <h2 style="margin:0; color: #4c1d95;">Visão Geral do Sistema</h2>
+        </div>
+        <div class="dash-grid">
+            <div class="dash-card">
+                <div style="color: #6b7280; font-weight: bold;">Total de Registros (Ativos)</div>
+                <div class="dash-number" id="dash-total">0</div>
+            </div>
+            <div class="dash-card">
+                <div style="color: #6b7280; font-weight: bold;">Casos Resolvidos</div>
+                <div class="dash-number" id="dash-resolvidos" style="color: #16a34a;">0</div>
+            </div>
+        </div>
+        <div class="dash-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="chart-container">
+                <canvas id="graficoCategorias"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoStatus"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-resolvidos" class="view-section">
+        <div class="header">
+            <h2 style="margin:0; color: #16a34a;">Histórico de Casos Resolvidos</h2>
+        </div>
+        <table class="lista-resolvidos">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Servidor</th>
+                    <th>Categoria</th>
+                    <th>Lotação</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-resolvidos">
+                </tbody>
+        </table>
+    </div>
+
+</div>
 
 <div class="modal-overlay" id="modalDetalhes">
     <div class="modal-content">
         <button class="close-modal" onclick="fecharModal()">X</button>
-        <div style="font-weight: bold; color: #6b7280; margin-bottom: 10px;">📄 Detalhes do Relato</div>
+        <h3 id="m-nome" style="color: #4c1d95; margin-top: 0;">Nome</h3>
+        <span class="card-tag" id="m-categoria">Categoria</span>
+        <div id="m-lotacao" style="font-size: 0.85em; color: #6b7280; margin-top: 5px;"></div>
         
-        <div class="modal-header">
-            <h3 class="modal-title" id="m-nome">Nome do Servidor</h3>
-            <span class="modal-category" id="m-categoria">Categoria</span>
-            <div id="m-lotacao" style="font-size: 0.85em; color: #6b7280; margin-top: 5px;"></div>
-        </div>
-        
-        <div class="modal-body" id="m-descricao">
-            Descrição do problema aparecerá aqui...
-        </div>
+        <div class="modal-body" id="m-descricao">Descrição...</div>
 
-        <div class="modal-footer">
-            <button class="btn-analisado" id="btnMarcarResolvido">📦 Analisado / Resolvido</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <div id="area-status-modal">
+                <label style="font-size: 0.85em; color: #6b7280;">Mover para:</label><br>
+                <select id="m-select-status" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></select>
+            </div>
+            <button class="btn" id="btnMarcarResolvido" style="background: #16a34a;">✅ Marcar como Resolvido</button>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCehAoG1wErUu78hGVPQudmr0C-B4uIz2o",
@@ -96,12 +165,46 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Gerenciamento das colunas (salvas no navegador para persistir novas colunas)
-    let colunas = JSON.parse(localStorage.getItem('kanban_colunas')) || ["Novo Pedido", "Em Análise", "Para Aprovação", "Resolvido"];
+    // Estado Global
+    let colunas = JSON.parse(localStorage.getItem('kanban_colunas')) || ["Novo Pedido", "Em Análise", "Para Aprovação"];
+    // Remove "Resolvido" das colunas do Kanban caso tenha ficado salvo de versões anteriores
+    colunas = colunas.filter(c => c !== "Resolvido"); 
+    
     let relatosGlobal = [];
     let idRelatoAtual = null;
+    let chartCategorias = null;
+    let chartStatus = null;
 
-    // Função para renderizar o quadro Kanban
+    // --- NAVEGAÇÃO DAS ABAS ---
+    window.mudarAba = function(aba) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(`view-${aba}`).classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        if(aba === 'dashboard') renderizarDashboard();
+        if(aba === 'resolvidos') renderizarTabelaResolvidos();
+    };
+
+    // --- ESCUTA DO FIREBASE ---
+    onSnapshot(collection(db, "relatos"), (snapshot) => {
+        relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Adiciona novas colunas automaticamente (exceto Resolvido)
+        relatosGlobal.forEach(r => {
+            if(!colunas.includes(r.status) && r.status !== "Resolvido") {
+                colunas.push(r.status);
+            }
+        });
+        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+        
+        renderizarBoard();
+        if(document.getElementById('view-dashboard').classList.contains('active')) renderizarDashboard();
+        if(document.getElementById('view-resolvidos').classList.contains('active')) renderizarTabelaResolvidos();
+    });
+
+    // --- KANBAN ---
     function renderizarBoard() {
         const board = document.getElementById('board');
         board.innerHTML = '';
@@ -113,8 +216,11 @@
             colDiv.className = 'kanban-column';
             colDiv.innerHTML = `
                 <div class="column-header">
-                    <span>${colNome}</span>
-                    <span class="column-count">${relatosDaColuna.length}</span>
+                    <span>${colNome} <span style="font-size: 0.8em; background:#e9d5ff; padding:2px 6px; border-radius:10px;">${relatosDaColuna.length}</span></span>
+                    <div class="col-actions">
+                        <button class="btn-sm" onclick="editarColuna('${colNome}')" title="Editar Nome">✏️</button>
+                        <button class="btn-sm" onclick="excluirColuna('${colNome}')" title="Excluir Coluna">🗑️</button>
+                    </div>
                 </div>
                 <div class="kanban-cards" data-status="${colNome}">
                     ${relatosDaColuna.map(r => criarCardHTML(r)).join('')}
@@ -123,29 +229,24 @@
             board.appendChild(colDiv);
         });
 
+        // Atualiza as opções de status no select do modal
+        const selectStatus = document.getElementById('m-select-status');
+        selectStatus.innerHTML = colunas.map(c => `<option value="${c}">${c}</option>`).join('');
+
         inicializarDragAndDrop();
     }
 
-    // Estrutura do Card Menor (Print 01)
     function criarCardHTML(relato) {
-        let dataStr = "S/ Data";
-        if(relato.dataEnvio) {
-            dataStr = relato.dataEnvio.toDate().toLocaleDateString('pt-BR');
-        }
-
+        let dataStr = relato.dataEnvio ? relato.dataEnvio.toDate().toLocaleDateString('pt-BR') : "S/ Data";
         return `
             <div class="kanban-card" data-id="${relato.id}" onclick="abrirModal('${relato.id}')">
                 <div class="card-title">${relato.anonimo ? '👤 Anônimo' : relato.nome}</div>
-                <div style="font-size: 0.8em; color: #6b7280; margin-bottom: 8px;">${relato.categoria}</div>
-                <div class="card-subtitle">
-                    <span>📅 ${dataStr}</span>
-                    <span class="card-tag">Acessar</span>
-                </div>
+                <span class="card-tag">${relato.categoria}</span>
+                <div style="font-size: 0.8em; color: #6b7280; margin-top: 10px;">📅 ${dataStr}</div>
             </div>
         `;
     }
 
-    // Ativa o arrastar e soltar do SortableJS
     function inicializarDragAndDrop() {
         document.querySelectorAll('.kanban-cards').forEach(container => {
             new Sortable(container, {
@@ -155,37 +256,60 @@
                 onEnd: async function (evt) {
                     const cardId = evt.item.dataset.id;
                     const novoStatus = evt.to.dataset.status;
-                    
-                    // Atualiza no banco de dados quando soltar na nova coluna
                     try {
-                        const relatoRef = doc(db, "relatos", cardId);
-                        await updateDoc(relatoRef, { status: novoStatus });
+                        await updateDoc(doc(db, "relatos", cardId), { status: novoStatus });
                     } catch (error) {
-                        console.error("Erro ao mover card: ", error);
-                        alert("Erro ao atualizar status.");
-                        renderizarBoard(); // Volta pro lugar original em caso de erro
+                        console.error("Erro:", error);
+                        renderizarBoard();
                     }
                 },
             });
         });
     }
 
-    // Escuta em Tempo Real do Firebase
-    onSnapshot(collection(db, "relatos"), (snapshot) => {
-        relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // --- GESTÃO DE COLUNAS ---
+    window.adicionarColunaPrompt = function() {
+        const nova = prompt("Nome da nova coluna:");
+        if (nova && nova.trim() !== "" && !colunas.includes(nova) && nova !== "Resolvido") {
+            colunas.push(nova.trim());
+            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+            renderizarBoard();
+        }
+    };
+
+    window.editarColuna = async function(nomeAntigo) {
+        const novoNome = prompt("Novo nome para a coluna:", nomeAntigo);
+        if(!novoNome || novoNome.trim() === "" || novoNome === nomeAntigo || novoNome === "Resolvido") return;
         
-        // Verifica se há status novos no banco que não estão nas colunas e adiciona automaticamente
-        relatosGlobal.forEach(r => {
-            if(!colunas.includes(r.status)) {
-                colunas.push(r.status);
-                localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-            }
+        // Atualiza o array local
+        colunas[colunas.indexOf(nomeAntigo)] = novoNome.trim();
+        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+        
+        // Atualiza todos os cards no banco de dados de uma vez (Batch)
+        const batch = writeBatch(db);
+        relatosGlobal.filter(r => r.status === nomeAntigo).forEach(r => {
+            batch.update(doc(db, "relatos", r.id), { status: novoNome.trim() });
         });
-
+        await batch.commit();
         renderizarBoard();
-    });
+    };
 
-    // --- FUNÇÕES DO MODAL ---
+    window.excluirColuna = async function(nome) {
+        if(!confirm(`Excluir a coluna "${nome}"? Os relatos nela voltarão para "Novo Pedido".`)) return;
+        
+        colunas = colunas.filter(c => c !== nome);
+        if(!colunas.includes("Novo Pedido")) colunas.unshift("Novo Pedido");
+        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+
+        const batch = writeBatch(db);
+        relatosGlobal.filter(r => r.status === nome).forEach(r => {
+            batch.update(doc(db, "relatos", r.id), { status: "Novo Pedido" });
+        });
+        await batch.commit();
+        renderizarBoard();
+    };
+
+    // --- MODAL ---
     window.abrirModal = function(id) {
         const relato = relatosGlobal.find(r => r.id === id);
         if(!relato) return;
@@ -196,6 +320,16 @@
         document.getElementById('m-lotacao').innerText = relato.anonimo ? '' : '📍 Lotação: ' + relato.lotacao;
         document.getElementById('m-descricao').innerText = relato.descricao;
         
+        const select = document.getElementById('m-select-status');
+        if(relato.status === "Resolvido") {
+            select.parentElement.style.display = 'none';
+            document.getElementById('btnMarcarResolvido').style.display = 'none';
+        } else {
+            select.parentElement.style.display = 'block';
+            select.value = relato.status;
+            document.getElementById('btnMarcarResolvido').style.display = 'block';
+        }
+
         document.getElementById('modalDetalhes').style.display = 'flex';
     };
 
@@ -204,34 +338,98 @@
         idRelatoAtual = null;
     };
 
-    // Botão Analisado/Resolvido
+    // Muda o status via select do modal
+    document.getElementById('m-select-status').addEventListener('change', async (e) => {
+        if(!idRelatoAtual) return;
+        await updateDoc(doc(db, "relatos", idRelatoAtual), { status: e.target.value });
+    });
+
+    // Botão Finalizar
     document.getElementById('btnMarcarResolvido').addEventListener('click', async () => {
         if(!idRelatoAtual) return;
-        
-        if(!colunas.includes("Resolvido")) {
-            colunas.push("Resolvido");
-            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-        }
-
-        try {
-            const relatoRef = doc(db, "relatos", idRelatoAtual);
-            await updateDoc(relatoRef, { status: "Resolvido" });
+        if(confirm("Tem certeza que deseja marcar como Resolvido? Ele sairá do Kanban.")) {
+            await updateDoc(doc(db, "relatos", idRelatoAtual), { status: "Resolvido" });
             fecharModal();
-        } catch (error) {
-            console.error("Erro ao finalizar:", error);
-            alert("Erro ao finalizar o relato.");
         }
     });
 
-    // Adicionar Nova Coluna
-    window.adicionarColunaPrompt = function() {
-        const novaColuna = prompt("Qual o nome da nova coluna?");
-        if (novaColuna && novaColuna.trim() !== "" && !colunas.includes(novaColuna.trim())) {
-            colunas.push(novaColuna.trim());
-            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-            renderizarBoard();
+    // --- DASHBOARD ---
+    function renderizarDashboard() {
+        const ativos = relatosGlobal.filter(r => r.status !== "Resolvido");
+        const resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
+        
+        document.getElementById('dash-total').innerText = ativos.length;
+        document.getElementById('dash-resolvidos').innerText = resolvidos.length;
+
+        // Dados para Gráfico de Categoria
+        const contagemCategorias = {};
+        relatosGlobal.forEach(r => {
+            contagemCategorias[r.categoria] = (contagemCategorias[r.categoria] || 0) + 1;
+        });
+
+        if(chartCategorias) chartCategorias.destroy();
+        chartCategorias = new Chart(document.getElementById('graficoCategorias'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(contagemCategorias),
+                datasets: [{
+                    data: Object.values(contagemCategorias),
+                    backgroundColor: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Demandas por Natureza' } } }
+        });
+
+        // Dados para Gráfico de Status
+        const contagemStatus = {};
+        ativos.forEach(r => {
+            contagemStatus[r.status] = (contagemStatus[r.status] || 0) + 1;
+        });
+
+        if(chartStatus) chartStatus.destroy();
+        chartStatus = new Chart(document.getElementById('graficoStatus'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(contagemStatus),
+                datasets: [{
+                    label: 'Quantidade',
+                    data: Object.values(contagemStatus),
+                    backgroundColor: '#6b21a8'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Demandas por Etapa (Ativas)' }, legend: {display: false} } }
+        });
+    }
+
+    // --- TABELA RESOLVIDOS ---
+    function renderizarTabelaResolvidos() {
+        const resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
+        const tbody = document.getElementById('tabela-resolvidos');
+        tbody.innerHTML = '';
+
+        if(resolvidos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum caso resolvido ainda.</td></tr>';
+            return;
         }
-    };
+
+        // Ordena do mais recente para o mais antigo
+        resolvidos.sort((a, b) => (b.dataEnvio?.seconds || 0) - (a.dataEnvio?.seconds || 0));
+
+        resolvidos.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.onclick = () => abrirModal(r.id);
+            let dataStr = r.dataEnvio ? r.dataEnvio.toDate().toLocaleDateString('pt-BR') : "-";
+            
+            tr.innerHTML = `
+                <td>${dataStr}</td>
+                <td>${r.anonimo ? '👤 Anônimo' : r.nome}</td>
+                <td><span class="card-tag">${r.categoria}</span></td>
+                <td>${r.anonimo ? '-' : r.lotacao}</td>
+                <td><button class="btn-sm" style="background:#f3f4f6;">Ler relato</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
 </script>
 </body>
