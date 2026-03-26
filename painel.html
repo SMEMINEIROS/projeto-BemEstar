@@ -13,7 +13,7 @@
         .sidebar { width: 250px; background: #4c1d95; color: white; display: flex; flex-direction: column; padding: 20px 0; }
         .sidebar-logo { text-align: center; margin-bottom: 30px; padding: 0 15px; }
         .logos-container { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .logos-container img { max-height: 80px; object-fit: contain; }
+        .logos-container img { max-height: 70px; object-fit: contain; }
         .menu-item { padding: 12px 20px; cursor: pointer; font-size: 1.05em; border-left: 4px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
         .menu-item:hover { background: #5b21b6; }
         .menu-item.active { background: #3b0764; border-left: 4px solid #c084fc; font-weight: bold; }
@@ -38,7 +38,7 @@
         .col-actions { display: flex; }
         .kanban-cards { min-height: 100px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
 
-        /* Cards Kanban (Mais compactos) */
+        /* Cards Kanban */
         .kanban-card { background: #ffffff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.1s; border-left: 4px solid #c084fc; }
         .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(107, 33, 168, 0.1); }
         .card-title { font-weight: bold; color: #2e1065; margin-bottom: 4px; font-size: 0.9em; }
@@ -51,10 +51,19 @@
         .chart-container { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9d5ff; height: 280px; display: flex; justify-content: center; }
 
         /* Lista de Resolvidos */
+        .barra-pesquisa { width: 100%; max-width: 400px; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 15px; outline: none; transition: border 0.3s; }
+        .barra-pesquisa:focus { border-color: #9333ea; }
         .lista-resolvidos { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.9em; }
         .lista-resolvidos th, .lista-resolvidos td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #f3f4f6; }
         .lista-resolvidos th { background: #f9fafb; color: #4b5563; font-weight: bold; }
         .lista-resolvidos tr:hover { background: #fdfafb; cursor: pointer; }
+        
+        /* Paginação */
+        .paginacao { display: flex; justify-content: center; gap: 5px; margin-top: 15px; }
+        .page-btn { padding: 6px 12px; border: 1px solid #e5e7eb; background: white; cursor: pointer; border-radius: 4px; color: #4b5563; font-weight: bold; }
+        .page-btn:hover { background: #f3f4f6; }
+        .page-btn.active { background: #16a34a; color: white; border-color: #16a34a; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
@@ -118,6 +127,11 @@
         <div class="header">
             <h2 style="margin:0; color: #16a34a; font-size: 1.4em;">Histórico de Casos Resolvidos</h2>
         </div>
+        
+        <div>
+            <input type="text" id="inputPesquisa" class="barra-pesquisa" placeholder="🔍 Pesquisar por nome, lotação ou categoria...">
+        </div>
+
         <table class="lista-resolvidos">
             <thead>
                 <tr>
@@ -131,6 +145,8 @@
             <tbody id="tabela-resolvidos">
                 </tbody>
         </table>
+        
+        <div id="paginacao" class="paginacao"></div>
     </div>
 
 </div>
@@ -177,6 +193,11 @@
     let idRelatoAtual = null;
     let chartCategorias = null;
     let chartStatus = null;
+
+    // Variáveis de Paginação e Pesquisa
+    let paginaAtual = 1;
+    const itensPorPagina = 10;
+    let termoPesquisa = "";
 
     window.mudarAba = function(aba) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -390,19 +411,54 @@
         });
     }
 
+    // --- NOVA LÓGICA DE PESQUISA E PAGINAÇÃO ---
+    
+    document.getElementById('inputPesquisa').addEventListener('input', (e) => {
+        termoPesquisa = e.target.value.toLowerCase();
+        paginaAtual = 1; // Volta para a primeira página ao pesquisar
+        renderizarTabelaResolvidos();
+    });
+
+    window.mudarPagina = function(novaPagina) {
+        paginaAtual = novaPagina;
+        renderizarTabelaResolvidos();
+    };
+
     function renderizarTabelaResolvidos() {
-        const resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
+        let resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
+
+        // 1. Aplicar filtro de pesquisa
+        if(termoPesquisa) {
+            resolvidos = resolvidos.filter(r => {
+                const nome = (r.anonimo ? "anônimo" : (r.nome || "")).toLowerCase();
+                const categoria = (r.categoria || "").toLowerCase();
+                const lotacao = (r.lotacao || "").toLowerCase();
+                return nome.includes(termoPesquisa) || categoria.includes(termoPesquisa) || lotacao.includes(termoPesquisa);
+            });
+        }
+
+        // 2. Ordenar por data
+        resolvidos.sort((a, b) => (b.dataEnvio?.seconds || 0) - (a.dataEnvio?.seconds || 0));
+
+        // 3. Lógica de Paginação
+        const totalPaginas = Math.ceil(resolvidos.length / itensPorPagina) || 1;
+        if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = inicio + itensPorPagina;
+        const itensDaPagina = resolvidos.slice(inicio, fim);
+
+        // 4. Renderizar Tabela
         const tbody = document.getElementById('tabela-resolvidos');
         tbody.innerHTML = '';
 
         if(resolvidos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum caso resolvido ainda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum caso encontrado.</td></tr>';
+            document.getElementById('paginacao').innerHTML = ''; // Limpa botões se não houver itens
             return;
         }
 
-        resolvidos.sort((a, b) => (b.dataEnvio?.seconds || 0) - (a.dataEnvio?.seconds || 0));
-
-        resolvidos.forEach(r => {
+        itensDaPagina.forEach(r => {
             const tr = document.createElement('tr');
             tr.onclick = () => abrirModal(r.id);
             let dataStr = r.dataEnvio ? r.dataEnvio.toDate().toLocaleDateString('pt-BR') : "-";
@@ -416,6 +472,34 @@
             `;
             tbody.appendChild(tr);
         });
+
+        // 5. Renderizar Botões de Paginação
+        const divPaginacao = document.getElementById('paginacao');
+        divPaginacao.innerHTML = '';
+
+        if(totalPaginas > 1) {
+            const btnPrev = document.createElement('button');
+            btnPrev.className = 'page-btn';
+            btnPrev.innerText = 'Anterior';
+            btnPrev.disabled = paginaAtual === 1;
+            btnPrev.onclick = () => mudarPagina(paginaAtual - 1);
+            divPaginacao.appendChild(btnPrev);
+
+            for(let i = 1; i <= totalPaginas; i++) {
+                const btnPage = document.createElement('button');
+                btnPage.className = `page-btn ${i === paginaAtual ? 'active' : ''}`;
+                btnPage.innerText = i;
+                btnPage.onclick = () => mudarPagina(i);
+                divPaginacao.appendChild(btnPage);
+            }
+
+            const btnNext = document.createElement('button');
+            btnNext.className = 'page-btn';
+            btnNext.innerText = 'Próxima';
+            btnNext.disabled = paginaAtual === totalPaginas;
+            btnNext.onclick = () => mudarPagina(paginaAtual + 1);
+            divPaginacao.appendChild(btnNext);
+        }
     }
 </script>
 </body>
