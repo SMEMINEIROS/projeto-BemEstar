@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gestão - Bem-Estar</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e2e8f0; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; }
+        h1 { color: #1e293b; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #3498db; }
+        .card-header { display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px;}
+        .tag { background: #e0f2fe; color: #0284c7; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8em; }
+        .anon-tag { background: #fef3c7; color: #d97706; }
+        .desc { color: #334155; font-size: 0.95em; white-space: pre-wrap; margin: 15px 0; }
+        .footer-info { font-size: 0.85em; color: #94a3b8; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: #fee2e2; color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Painel de Demandas - Bem-Estar</h1>
+    <div>
+        <span id="contador">Carregando...</span> relatos recebidos
+    </div>
+</div>
+
+<div class="grid" id="listaRelatos">
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCehAoG1wErUu78hGVPQudmr0C-B4uIz2o",
+        authDomain: "projeto-bemestar-8faeb.firebaseapp.com",
+        projectId: "projeto-bemestar-8faeb",
+        storageBucket: "projeto-bemestar-8faeb.firebasestorage.app",
+        messagingSenderId: "185448860439",
+        appId: "1:185448860439:web:27e0ff8d9bcf3723338552"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function carregarRelatos() {
+        const lista = document.getElementById('listaRelatos');
+        const contador = document.getElementById('contador');
+        lista.innerHTML = "Buscando dados no Firebase...";
+
+        try {
+            // Busca os relatos ordenados pelos mais recentes
+            const q = query(collection(db, "relatos"), orderBy("dataEnvio", "desc"));
+            const querySnapshot = await getDocs(q);
+            
+            lista.innerHTML = '';
+            contador.innerText = querySnapshot.size;
+
+            if(querySnapshot.empty) {
+                lista.innerHTML = "<p>Nenhum relato recebido ainda.</p>";
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const dados = doc.data();
+                let dataFormatada = "Data não registrada";
+                if(dados.dataEnvio) {
+                    const dataObj = dados.dataEnvio.toDate();
+                    dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' às ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                }
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="tag ${dados.anonimo ? 'anon-tag' : ''}">${dados.categoria}</span>
+                        <span>${dataFormatada}</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>${dados.anonimo ? '👤 Relato Anônimo' : '👤 ' + dados.nome}</strong><br>
+                        ${!dados.anonimo ? `<span class="footer-info">📍 Lotação: ${dados.lotacao}</span>` : ''}
+                    </div>
+                    <div class="desc">${dados.descricao}</div>
+                    <div style="text-align: right; margin-top: 10px;">
+                        <span class="status-badge">🚨 Novo</span>
+                    </div>
+                `;
+                lista.appendChild(card);
+            });
+        } catch (error) {
+            console.error("Erro ao carregar:", error);
+            lista.innerHTML = "<p style='color:red;'>Erro ao carregar dados. Verifique o console ou as permissões do Firestore.</p>";
+        }
+    }
+
+    carregarRelatos();
+</script>
+</body>
+</html>
