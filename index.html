@@ -68,10 +68,6 @@
         <label for="categoria">Natureza do Relato:</label>
         <select id="categoria" required>
             <option value="">Selecione uma opção...</option>
-            <option value="Demanda Psicossocial">Demanda Psicossocial</option>
-            <option value="Sugestão de Melhoria">Sugestão de Melhoria</option>
-            <option value="Reclamação">Reclamação</option>
-            <option value="Mediação de Conflito">Mediação de Conflito</option>
         </select>
 
         <label for="descricao">Descreva a situação:</label>
@@ -85,7 +81,6 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    // Adicionamos doc e getDoc para ler as configurações
     import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -100,28 +95,60 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // --- LÓGICA DE TEXTOS DINÂMICOS (CMS) ---
-    async function carregarTextos() {
+    // --- LÓGICA DE TEXTOS E CATEGORIAS DINÂMICAS (CMS) ---
+    const selectCategoria = document.getElementById('categoria');
+    
+    // Categorias de segurança caso a internet falhe ou o painel não tenha sido salvo ainda
+    const categoriasPadrao = [
+        "Demanda Psicossocial", 
+        "Sugestão de Melhoria", 
+        "Reclamação", 
+        "Mediação de Conflito"
+    ];
+
+    function popularCategorias(lista) {
+        selectCategoria.innerHTML = '<option value="">Selecione uma opção...</option>';
+        lista.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            selectCategoria.appendChild(opt);
+        });
+    }
+
+    async function carregarConfiguracoes() {
         try {
             const docRef = doc(db, "configuracoes", "geral");
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
                 const dados = docSnap.data();
+                
+                // Atualiza Título e Descrição
                 if(dados.titulo && dados.titulo.trim() !== "") {
                     document.getElementById('tituloPagina').innerText = dados.titulo;
                 }
                 if(dados.descricao && dados.descricao.trim() !== "") {
                     document.getElementById('descPagina').innerText = dados.descricao;
                 }
+
+                // Atualiza as Categorias
+                if (dados.categorias && Array.isArray(dados.categorias) && dados.categorias.length > 0) {
+                    popularCategorias(dados.categorias);
+                } else {
+                    popularCategorias(categoriasPadrao); // Se não tiver array de categorias salvo, usa o padrão
+                }
+            } else {
+                popularCategorias(categoriasPadrao); // Se não existir o documento 'geral' ainda, usa o padrão
             }
         } catch (error) {
-            console.log("Usando textos padrão da página.", error);
+            console.log("Erro ao carregar do Firebase. Usando textos padrão da página.", error);
+            popularCategorias(categoriasPadrao);
         }
     }
     
-    // Inicia a busca dos textos ao carregar a página
-    carregarTextos();
+    // Inicia a busca das configurações ao carregar a página
+    carregarConfiguracoes();
 
     // --- LÓGICA DO FORMULÁRIO ---
     const chkAnonimo = document.getElementById('anonimo');
@@ -129,13 +156,11 @@
     
     chkAnonimo.addEventListener('change', (e) => {
         if(e.target.checked) {
-            // Se marcar anônimo, esconde e limpa os campos
             areaIdentificacao.classList.add('hidden');
             document.getElementById('nome').value = '';
             document.getElementById('telefone').value = '';
             document.getElementById('lotacao').value = '';
         } else {
-            // Se desmarcar, mostra a área de identificação
             areaIdentificacao.classList.remove('hidden');
         }
     });
