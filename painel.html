@@ -162,14 +162,18 @@
         
         <div class="config-card">
             <p style="color: #6b7280; font-size: 0.95em; margin-bottom: 25px;">
-                Altere os textos de apresentação que aparecem na página pública para os colaboradores.
+                Altere os textos de apresentação e as categorias do formulário público dos colaboradores.
             </p>
 
             <label class="config-label">Título da Página:</label>
             <input type="text" id="configTitulo" class="config-input" placeholder="Ex: Canal de Comunicação Direta">
 
             <label class="config-label">Texto de Acolhimento / Descrição:</label>
-            <textarea id="configDescricao" class="config-input" style="height: 120px; resize: vertical;" placeholder="Escreva a mensagem de apresentação..."></textarea>
+            <textarea id="configDescricao" class="config-input" style="height: 100px; resize: vertical;" placeholder="Escreva a mensagem de apresentação..."></textarea>
+
+            <label class="config-label">Opções de "Natureza do Relato" (Uma por linha):</label>
+            <p style="font-size: 0.8em; color: #6b7280; margin-top: -5px; margin-bottom: 10px;">Pressione a tecla Enter para separar as categorias.</p>
+            <textarea id="configCategorias" class="config-input" style="height: 120px; resize: vertical;" placeholder="Demanda Psicossocial&#10;Sugestão de Melhoria&#10;Reclamação..."></textarea>
 
             <button class="btn" id="btnSalvarConfig">💾 Salvar Alterações</button>
             <span id="msgConfigSalva" style="color: #16a34a; font-weight: bold; margin-left: 15px; display: none;">✅ Textos atualizados no Firebase!</span>
@@ -201,7 +205,6 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    // Adicionamos doc, getDoc e setDoc para o funcionamento das configurações
     import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -224,7 +227,6 @@
     let chartCategorias = null;
     let chartStatus = null;
 
-    // Variáveis de Paginação e Pesquisa
     let paginaAtual = 1;
     const itensPorPagina = 10;
     let termoPesquisa = "";
@@ -241,6 +243,13 @@
     };
 
     // --- LÓGICA DE CONFIGURAÇÕES (CMS) ---
+    const categoriasPadrao = [
+        "Demanda Psicossocial", 
+        "Sugestão de Melhoria", 
+        "Reclamação", 
+        "Mediação de Conflito"
+    ];
+
     async function carregarConfiguracoes() {
         try {
             const docSnap = await getDoc(doc(db, "configuracoes", "geral"));
@@ -248,16 +257,23 @@
                 const dados = docSnap.data();
                 document.getElementById('configTitulo').value = dados.titulo || "Canal de Comunicação Direta";
                 document.getElementById('configDescricao').value = dados.descricao || "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+                
+                // Transforma o array do Firebase em um texto com quebra de linha
+                if(dados.categorias && Array.isArray(dados.categorias) && dados.categorias.length > 0) {
+                    document.getElementById('configCategorias').value = dados.categorias.join("\n");
+                } else {
+                    document.getElementById('configCategorias').value = categoriasPadrao.join("\n");
+                }
             } else {
                 document.getElementById('configTitulo').value = "Canal de Comunicação Direta";
                 document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+                document.getElementById('configCategorias').value = categoriasPadrao.join("\n");
             }
         } catch (error) {
             console.error("Erro ao carregar textos:", error);
         }
     }
 
-    // Carrega os textos quando abre o painel
     carregarConfiguracoes();
 
     document.getElementById('btnSalvarConfig').addEventListener('click', async () => {
@@ -268,12 +284,18 @@
 
         const novoTitulo = document.getElementById('configTitulo').value;
         const novaDescricao = document.getElementById('configDescricao').value;
+        const textoCategorias = document.getElementById('configCategorias').value;
+
+        // Pega o texto, separa por quebras de linha e limpa os espaços vazios
+        const novaListaCategorias = textoCategorias.split("\n")
+            .map(cat => cat.trim())
+            .filter(cat => cat !== "");
 
         try {
-            // Salva ou sobrescreve as configurações na coleção "configuracoes"
             await setDoc(doc(db, "configuracoes", "geral"), {
                 titulo: novoTitulo,
-                descricao: novaDescricao
+                descricao: novaDescricao,
+                categorias: novaListaCategorias
             }, { merge: true });
 
             btn.innerText = "💾 Salvar Alterações";
@@ -412,7 +434,6 @@
         document.getElementById('m-nome').innerText = relato.anonimo ? '👤 Relato Anônimo' : relato.nome;
         document.getElementById('m-categoria').innerText = relato.categoria;
         
-        // Exibição da Lotação e do Novo Campo Telefone
         document.getElementById('m-lotacao').innerText = relato.anonimo ? '' : '📍 Lotação: ' + (relato.lotacao || 'Não informada');
         
         if (relato.anonimo || !relato.telefone || relato.telefone === "Não informado") {
@@ -503,7 +524,7 @@
     
     document.getElementById('inputPesquisa').addEventListener('input', (e) => {
         termoPesquisa = e.target.value.toLowerCase();
-        paginaAtual = 1; // Volta para a primeira página ao pesquisar
+        paginaAtual = 1;
         renderizarTabelaResolvidos();
     });
 
@@ -515,7 +536,6 @@
     function renderizarTabelaResolvidos() {
         let resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
 
-        // 1. Aplicar filtro de pesquisa
         if(termoPesquisa) {
             resolvidos = resolvidos.filter(r => {
                 const nome = (r.anonimo ? "anônimo" : (r.nome || "")).toLowerCase();
@@ -525,10 +545,8 @@
             });
         }
 
-        // 2. Ordenar por data
         resolvidos.sort((a, b) => (b.dataEnvio?.seconds || 0) - (a.dataEnvio?.seconds || 0));
 
-        // 3. Lógica de Paginação
         const totalPaginas = Math.ceil(resolvidos.length / itensPorPagina) || 1;
         if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
 
@@ -536,13 +554,12 @@
         const fim = inicio + itensPorPagina;
         const itensDaPagina = resolvidos.slice(inicio, fim);
 
-        // 4. Renderizar Tabela
         const tbody = document.getElementById('tabela-resolvidos');
         tbody.innerHTML = '';
 
         if(resolvidos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum caso encontrado.</td></tr>';
-            document.getElementById('paginacao').innerHTML = ''; // Limpa botões se não houver itens
+            document.getElementById('paginacao').innerHTML = '';
             return;
         }
 
@@ -561,7 +578,6 @@
             tbody.appendChild(tr);
         });
 
-        // 5. Renderizar Botões de Paginação
         const divPaginacao = document.getElementById('paginacao');
         divPaginacao.innerHTML = '';
 
