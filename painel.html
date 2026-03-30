@@ -65,6 +65,11 @@
         .page-btn.active { background: #16a34a; color: white; border-color: #16a34a; }
         .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* Configurações */
+        .config-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9d5ff; max-width: 600px; }
+        .config-label { font-weight: bold; color: #4c1d95; display: block; margin-bottom: 8px; }
+        .config-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #d1d5db; margin-bottom: 20px; box-sizing: border-box; font-family: inherit; }
+
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 480px; max-width: 90%; border-radius: 12px; padding: 25px; position: relative; }
@@ -86,6 +91,7 @@
     <div class="menu-item active" onclick="mudarAba('kanban')">📋 Quadro de Demandas</div>
     <div class="menu-item" onclick="mudarAba('dashboard')">📊 Dashboard</div>
     <div class="menu-item" onclick="mudarAba('resolvidos')">✅ Casos Resolvidos</div>
+    <div class="menu-item" onclick="mudarAba('config')">⚙️ Configurações</div>
 </div>
 
 <div class="main-content">
@@ -149,6 +155,27 @@
         <div id="paginacao" class="paginacao"></div>
     </div>
 
+    <div id="view-config" class="view-section">
+        <div class="header">
+            <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Configurações do Canal</h2>
+        </div>
+        
+        <div class="config-card">
+            <p style="color: #6b7280; font-size: 0.95em; margin-bottom: 25px;">
+                Altere os textos de apresentação que aparecem na página pública para os colaboradores.
+            </p>
+
+            <label class="config-label">Título da Página:</label>
+            <input type="text" id="configTitulo" class="config-input" placeholder="Ex: Canal de Comunicação Direta">
+
+            <label class="config-label">Texto de Acolhimento / Descrição:</label>
+            <textarea id="configDescricao" class="config-input" style="height: 120px; resize: vertical;" placeholder="Escreva a mensagem de apresentação..."></textarea>
+
+            <button class="btn" id="btnSalvarConfig">💾 Salvar Alterações</button>
+            <span id="msgConfigSalva" style="color: #16a34a; font-weight: bold; margin-left: 15px; display: none;">✅ Textos atualizados no Firebase!</span>
+        </div>
+    </div>
+
 </div>
 
 <div class="modal-overlay" id="modalDetalhes">
@@ -156,7 +183,9 @@
         <button class="close-modal" onclick="fecharModal()">X</button>
         <h3 id="m-nome" style="color: #4c1d95; margin-top: 0; margin-bottom: 5px; font-size: 1.2em;">Nome</h3>
         <span class="card-tag" id="m-categoria" style="font-size: 0.8em; font-weight: bold;">Categoria</span>
-        <div id="m-lotacao" style="font-size: 0.85em; color: #6b7280; margin-top: 10px;"></div>
+        
+        <div id="m-lotacao" style="font-size: 0.85em; color: #6b7280; margin-top: 15px;"></div>
+        <div id="m-telefone" style="font-size: 0.85em; color: #6b7280; margin-top: 5px;"></div>
         
         <div class="modal-body" id="m-descricao">Descrição...</div>
 
@@ -172,7 +201,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    // Adicionamos doc, getDoc e setDoc para o funcionamento das configurações
+    import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCehAoG1wErUu78hGVPQudmr0C-B4uIz2o",
@@ -209,6 +239,55 @@
         if(aba === 'dashboard') renderizarDashboard();
         if(aba === 'resolvidos') renderizarTabelaResolvidos();
     };
+
+    // --- LÓGICA DE CONFIGURAÇÕES (CMS) ---
+    async function carregarConfiguracoes() {
+        try {
+            const docSnap = await getDoc(doc(db, "configuracoes", "geral"));
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                document.getElementById('configTitulo').value = dados.titulo || "Canal de Comunicação Direta";
+                document.getElementById('configDescricao').value = dados.descricao || "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+            } else {
+                document.getElementById('configTitulo').value = "Canal de Comunicação Direta";
+                document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+            }
+        } catch (error) {
+            console.error("Erro ao carregar textos:", error);
+        }
+    }
+
+    // Carrega os textos quando abre o painel
+    carregarConfiguracoes();
+
+    document.getElementById('btnSalvarConfig').addEventListener('click', async () => {
+        const btn = document.getElementById('btnSalvarConfig');
+        const msg = document.getElementById('msgConfigSalva');
+        btn.innerText = "Salvando...";
+        btn.disabled = true;
+
+        const novoTitulo = document.getElementById('configTitulo').value;
+        const novaDescricao = document.getElementById('configDescricao').value;
+
+        try {
+            // Salva ou sobrescreve as configurações na coleção "configuracoes"
+            await setDoc(doc(db, "configuracoes", "geral"), {
+                titulo: novoTitulo,
+                descricao: novaDescricao
+            }, { merge: true });
+
+            btn.innerText = "💾 Salvar Alterações";
+            btn.disabled = false;
+            msg.style.display = "inline";
+            setTimeout(() => msg.style.display = "none", 4000);
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            alert("Ocorreu um erro ao salvar. Verifique as permissões do Firebase.");
+            btn.innerText = "💾 Salvar Alterações";
+            btn.disabled = false;
+        }
+    });
+    // -------------------------------------
 
     onSnapshot(collection(db, "relatos"), (snapshot) => {
         relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -332,7 +411,16 @@
         idRelatoAtual = id;
         document.getElementById('m-nome').innerText = relato.anonimo ? '👤 Relato Anônimo' : relato.nome;
         document.getElementById('m-categoria').innerText = relato.categoria;
-        document.getElementById('m-lotacao').innerText = relato.anonimo ? '' : '📍 Lotação: ' + relato.lotacao;
+        
+        // Exibição da Lotação e do Novo Campo Telefone
+        document.getElementById('m-lotacao').innerText = relato.anonimo ? '' : '📍 Lotação: ' + (relato.lotacao || 'Não informada');
+        
+        if (relato.anonimo || !relato.telefone || relato.telefone === "Não informado") {
+            document.getElementById('m-telefone').innerText = '';
+        } else {
+            document.getElementById('m-telefone').innerText = '📞 Tel/Whats: ' + relato.telefone;
+        }
+        
         document.getElementById('m-descricao').innerText = relato.descricao;
         
         const select = document.getElementById('m-select-status');
@@ -411,7 +499,7 @@
         });
     }
 
-    // --- NOVA LÓGICA DE PESQUISA E PAGINAÇÃO ---
+    // --- LÓGICA DE PESQUISA E PAGINAÇÃO ---
     
     document.getElementById('inputPesquisa').addEventListener('input', (e) => {
         termoPesquisa = e.target.value.toLowerCase();
