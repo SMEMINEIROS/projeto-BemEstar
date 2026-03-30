@@ -24,6 +24,7 @@
         button:hover { background-color: #2980b9; }
         .hidden { display: none; }
         #mensagemSucesso { display: none; background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-top: 20px; text-align: center; font-weight: bold; }
+        
         /* Ajustes apenas para telas de celular */
         @media (max-width: 600px) {
             .header-logos img { 
@@ -44,20 +45,23 @@
         <img src="logo-secretaria.png" alt="Secretaria de Educação">
     </div>
 
-    <h2>Canal de Comunicação Direta</h2>
-    <p class="desc">Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.</p>
+    <h2 id="tituloPagina">Canal de Comunicação Direta</h2>
+    <p class="desc" id="descPagina">Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.</p>
 
     <div class="checkbox-group">
-        <input type="checkbox" id="anonimo" checked>
+        <input type="checkbox" id="anonimo">
         <label for="anonimo">Quero enviar meu relato de forma anônima</label>
     </div>
 
     <form id="formRelato">
-        <div id="areaIdentificacao" class="hidden">
+        <div id="areaIdentificacao">
             <label for="nome">Nome Completo (Opcional):</label>
             <input type="text" id="nome" placeholder="Digite seu nome">
+
+            <label for="telefone">Telefone / WhatsApp (Opcional):</label>
+            <input type="text" id="telefone" placeholder="(00) 00000-0000">
             
-            <label for="lotacao">Lotação / Escola:</label>
+            <label for="lotacao">Lotação / Escola (Opcional):</label>
             <input type="text" id="lotacao" placeholder="Onde você atua?">
         </div>
 
@@ -81,7 +85,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    // Adicionamos doc e getDoc para ler as configurações
+    import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCehAoG1wErUu78hGVPQudmr0C-B4uIz2o",
@@ -95,15 +100,42 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // --- LÓGICA DE TEXTOS DINÂMICOS (CMS) ---
+    async function carregarTextos() {
+        try {
+            const docRef = doc(db, "configuracoes", "geral");
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                if(dados.titulo && dados.titulo.trim() !== "") {
+                    document.getElementById('tituloPagina').innerText = dados.titulo;
+                }
+                if(dados.descricao && dados.descricao.trim() !== "") {
+                    document.getElementById('descPagina').innerText = dados.descricao;
+                }
+            }
+        } catch (error) {
+            console.log("Usando textos padrão da página.", error);
+        }
+    }
+    
+    // Inicia a busca dos textos ao carregar a página
+    carregarTextos();
+
+    // --- LÓGICA DO FORMULÁRIO ---
     const chkAnonimo = document.getElementById('anonimo');
     const areaIdentificacao = document.getElementById('areaIdentificacao');
     
     chkAnonimo.addEventListener('change', (e) => {
         if(e.target.checked) {
+            // Se marcar anônimo, esconde e limpa os campos
             areaIdentificacao.classList.add('hidden');
             document.getElementById('nome').value = '';
+            document.getElementById('telefone').value = '';
             document.getElementById('lotacao').value = '';
         } else {
+            // Se desmarcar, mostra a área de identificação
             areaIdentificacao.classList.remove('hidden');
         }
     });
@@ -118,10 +150,11 @@
         const dados = {
             anonimo: isAnonimo,
             nome: isAnonimo ? "Anônimo" : document.getElementById('nome').value || "Não informado",
+            telefone: isAnonimo ? "Não informado" : document.getElementById('telefone').value || "Não informado",
             lotacao: isAnonimo ? "Não informada" : document.getElementById('lotacao').value || "Não informada",
             categoria: document.getElementById('categoria').value,
             descricao: document.getElementById('descricao').value,
-            status: "Novo Pedido", // Status inicial padrão
+            status: "Novo Pedido",
             dataEnvio: serverTimestamp()
         };
 
