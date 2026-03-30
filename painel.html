@@ -7,8 +7,22 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f0fa; margin: 0; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f0fa; margin: 0; color: #333; height: 100vh; overflow: hidden; }
         
+        /* TELA DE LOGIN */
+        #tela-login { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #4c1d95; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
+        .login-box img { max-height: 80px; margin-bottom: 20px; }
+        .login-box h2 { color: #4c1d95; margin-top: 0; margin-bottom: 5px; }
+        .login-box p { color: #6b7280; font-size: 0.9em; margin-bottom: 20px; }
+        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .login-btn { width: 100%; background: #6b21a8; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 1em; cursor: pointer; transition: 0.3s; }
+        .login-btn:hover { background: #5b21b6; }
+        #msgErroLogin { color: #dc2626; font-size: 0.85em; margin-top: 10px; display: none; font-weight: bold; }
+
+        /* Estrutura do Painel (Oculto inicialmente) */
+        #app-content { display: none; width: 100%; height: 100%; flex-direction: row; }
+
         /* Menu Lateral (Sidebar) */
         .sidebar { width: 250px; background: #4c1d95; color: white; display: flex; flex-direction: column; padding: 20px 0; }
         .sidebar-logo { text-align: center; margin-bottom: 30px; padding: 0 15px; }
@@ -31,7 +45,7 @@
         .btn-sm { padding: 4px 6px; font-size: 0.8em; border-radius: 4px; margin-left: 5px; background: #e9d5ff; color: #4c1d95; }
         .btn-sm:hover { background: #d8b4fe; }
 
-        /* Quadro de Demandas (Mais compacto) */
+        /* Quadro de Demandas */
         .kanban-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; min-height: 70vh; }
         .kanban-column { background: #ffffff; border-radius: 10px; width: 280px; min-width: 280px; padding: 12px; box-shadow: 0 2px 8px rgba(107, 33, 168, 0.05); border-top: 4px solid #9333ea; display: flex; flex-direction: column; }
         .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; color: #4c1d95; font-size: 0.95em; }
@@ -79,107 +93,122 @@
 </head>
 <body>
 
-<div class="sidebar">
-    <div class="sidebar-logo">
-        <div class="logos-container">
-            <img src="logo-prefeitura.png" alt="Prefeitura" onerror="this.style.display='none'">
-            <img src="logo-secretaria.png" alt="SME" onerror="this.style.display='none'">
-        </div>
-        <div style="font-size: 1.1em; font-weight: bold; margin-top: 10px;">Gestão Bem-Estar</div>
+<div id="tela-login">
+    <div class="login-box">
+        <img src="logo-secretaria.png" alt="SME" onerror="this.style.display='none'">
+        <h2>Área Restrita</h2>
+        <p>Acesso exclusivo para a equipe de gestão.</p>
+        
+        <form id="form-login">
+            <input type="email" id="email" class="login-input" placeholder="Seu E-mail" required>
+            <input type="password" id="senha" class="login-input" placeholder="Sua Senha" required>
+            <button type="submit" class="login-btn" id="btn-entrar">Entrar no Painel</button>
+        </form>
+        <div id="msgErroLogin">E-mail ou senha incorretos.</div>
     </div>
-    
-    <div class="menu-item active" onclick="mudarAba('kanban')">📋 Quadro de Demandas</div>
-    <div class="menu-item" onclick="mudarAba('dashboard')">📊 Dashboard</div>
-    <div class="menu-item" onclick="mudarAba('resolvidos')">✅ Casos Resolvidos</div>
-    <div class="menu-item" onclick="mudarAba('config')">⚙️ Configurações</div>
 </div>
 
-<div class="main-content">
-    
-    <div id="view-kanban" class="view-section active">
-        <div class="header">
-            <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Acompanhamento de Demandas</h2>
-            <button class="btn" onclick="adicionarColunaPrompt()">+ Nova Coluna</button>
-        </div>
-        <div class="kanban-board" id="board">
+<div id="app-content">
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logos-container">
+                <img src="logo-prefeitura.png" alt="Prefeitura" onerror="this.style.display='none'">
+                <img src="logo-secretaria.png" alt="SME" onerror="this.style.display='none'">
             </div>
-    </div>
-
-    <div id="view-dashboard" class="view-section">
-        <div class="header">
-            <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Visão Geral do Sistema</h2>
-        </div>
-        <div class="dash-grid">
-            <div class="dash-card">
-                <div style="color: #6b7280; font-weight: bold; font-size: 0.9em;">Total de Registros (Ativos)</div>
-                <div class="dash-number" id="dash-total">0</div>
-            </div>
-            <div class="dash-card">
-                <div style="color: #6b7280; font-weight: bold; font-size: 0.9em;">Casos Resolvidos</div>
-                <div class="dash-number" id="dash-resolvidos" style="color: #16a34a;">0</div>
-            </div>
-        </div>
-        <div class="dash-grid" style="grid-template-columns: 1fr 1fr;">
-            <div class="chart-container">
-                <canvas id="graficoCategorias"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="graficoStatus"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-resolvidos" class="view-section">
-        <div class="header">
-            <h2 style="margin:0; color: #16a34a; font-size: 1.4em;">Histórico de Casos Resolvidos</h2>
+            <div style="font-size: 1.1em; font-weight: bold; margin-top: 10px;">Gestão Bem-Estar</div>
         </div>
         
-        <div>
-            <input type="text" id="inputPesquisa" class="barra-pesquisa" placeholder="🔍 Pesquisar por nome, lotação ou categoria...">
-        </div>
-
-        <table class="lista-resolvidos">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Servidor</th>
-                    <th>Categoria</th>
-                    <th>Lotação</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-resolvidos">
-                </tbody>
-        </table>
+        <div class="menu-item active" onclick="mudarAba('kanban')">📋 Quadro de Demandas</div>
+        <div class="menu-item" onclick="mudarAba('dashboard')">📊 Dashboard</div>
+        <div class="menu-item" onclick="mudarAba('resolvidos')">✅ Casos Resolvidos</div>
+        <div class="menu-item" onclick="mudarAba('config')">⚙️ Configurações</div>
         
-        <div id="paginacao" class="paginacao"></div>
+        <div class="menu-item" style="margin-top: auto; color: #fca5a5; border-left-color: transparent;" onclick="fazerLogout()">🚪 Sair do Sistema</div>
     </div>
 
-    <div id="view-config" class="view-section">
-        <div class="header">
-            <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Configurações do Canal</h2>
+    <div class="main-content">
+        <div id="view-kanban" class="view-section active">
+            <div class="header">
+                <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Acompanhamento de Demandas</h2>
+                <button class="btn" onclick="adicionarColunaPrompt()">+ Nova Coluna</button>
+            </div>
+            <div class="kanban-board" id="board"></div>
         </div>
-        
-        <div class="config-card">
-            <p style="color: #6b7280; font-size: 0.95em; margin-bottom: 25px;">
-                Altere os textos de apresentação e as categorias do formulário público dos colaboradores.
-            </p>
 
-            <label class="config-label">Título da Página:</label>
-            <input type="text" id="configTitulo" class="config-input" placeholder="Ex: Canal de Comunicação Direta">
+        <div id="view-dashboard" class="view-section">
+            <div class="header">
+                <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Visão Geral do Sistema</h2>
+            </div>
+            <div class="dash-grid">
+                <div class="dash-card">
+                    <div style="color: #6b7280; font-weight: bold; font-size: 0.9em;">Total de Registros (Ativos)</div>
+                    <div class="dash-number" id="dash-total">0</div>
+                </div>
+                <div class="dash-card">
+                    <div style="color: #6b7280; font-weight: bold; font-size: 0.9em;">Casos Resolvidos</div>
+                    <div class="dash-number" id="dash-resolvidos" style="color: #16a34a;">0</div>
+                </div>
+            </div>
+            <div class="dash-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="chart-container">
+                    <canvas id="graficoCategorias"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="graficoStatus"></canvas>
+                </div>
+            </div>
+        </div>
 
-            <label class="config-label">Texto de Acolhimento / Descrição:</label>
-            <textarea id="configDescricao" class="config-input" style="height: 100px; resize: vertical;" placeholder="Escreva a mensagem de apresentação..."></textarea>
+        <div id="view-resolvidos" class="view-section">
+            <div class="header">
+                <h2 style="margin:0; color: #16a34a; font-size: 1.4em;">Histórico de Casos Resolvidos</h2>
+            </div>
+            
+            <div>
+                <input type="text" id="inputPesquisa" class="barra-pesquisa" placeholder="🔍 Pesquisar por nome, lotação ou categoria...">
+            </div>
 
-            <label class="config-label">Opções de "Natureza do Relato" (Uma por linha):</label>
-            <p style="font-size: 0.8em; color: #6b7280; margin-top: -5px; margin-bottom: 10px;">Pressione a tecla Enter para separar as categorias.</p>
-            <textarea id="configCategorias" class="config-input" style="height: 120px; resize: vertical;" placeholder="Demanda Psicossocial&#10;Sugestão de Melhoria&#10;Reclamação..."></textarea>
+            <table class="lista-resolvidos">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Servidor</th>
+                        <th>Categoria</th>
+                        <th>Lotação</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-resolvidos"></tbody>
+            </table>
+            
+            <div id="paginacao" class="paginacao"></div>
+        </div>
 
-            <button class="btn" id="btnSalvarConfig">💾 Salvar Alterações</button>
-            <span id="msgConfigSalva" style="color: #16a34a; font-weight: bold; margin-left: 15px; display: none;">✅ Textos atualizados no Firebase!</span>
+        <div id="view-config" class="view-section">
+            <div class="header">
+                <h2 style="margin:0; color: #4c1d95; font-size: 1.4em;">Configurações do Canal</h2>
+            </div>
+            
+            <div class="config-card">
+                <p style="color: #6b7280; font-size: 0.95em; margin-bottom: 25px;">
+                    Altere os textos de apresentação e as categorias do formulário público dos colaboradores.
+                </p>
+
+                <label class="config-label">Título da Página:</label>
+                <input type="text" id="configTitulo" class="config-input" placeholder="Ex: Canal de Comunicação Direta">
+
+                <label class="config-label">Texto de Acolhimento / Descrição:</label>
+                <textarea id="configDescricao" class="config-input" style="height: 100px; resize: vertical;" placeholder="Escreva a mensagem de apresentação..."></textarea>
+
+                <label class="config-label">Opções de "Natureza do Relato" (Uma por linha):</label>
+                <p style="font-size: 0.8em; color: #6b7280; margin-top: -5px; margin-bottom: 10px;">Pressione a tecla Enter para separar as categorias.</p>
+                <textarea id="configCategorias" class="config-input" style="height: 120px; resize: vertical;" placeholder="Demanda Psicossocial&#10;Sugestão de Melhoria&#10;Reclamação..."></textarea>
+
+                <button class="btn" id="btnSalvarConfig">💾 Salvar Alterações</button>
+                <span id="msgConfigSalva" style="color: #16a34a; font-weight: bold; margin-left: 15px; display: none;">✅ Textos atualizados!</span>
+            </div>
         </div>
     </div>
-
 </div>
 
 <div class="modal-overlay" id="modalDetalhes">
@@ -206,6 +235,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    // Importando as funções de Autenticação
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCehAoG1wErUu78hGVPQudmr0C-B4uIz2o",
@@ -218,7 +249,68 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app); // Inicializa a autenticação
 
+    // --- CONTROLE DE LOGIN / LOGOUT ---
+    const telaLogin = document.getElementById('tela-login');
+    const appContent = document.getElementById('app-content');
+    let listenerDeDados = null; // Para parar de puxar dados se fizer logout
+
+    // Ouve as mudanças de estado (logado ou não)
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Usuário está logado: esconde login, mostra painel e carrega dados
+            telaLogin.style.display = 'none';
+            appContent.style.display = 'flex';
+            iniciarSistema(); 
+        } else {
+            // Ninguém logado: mostra login, esconde painel
+            telaLogin.style.display = 'flex';
+            appContent.style.display = 'none';
+            if (listenerDeDados) listenerDeDados(); // Para de ouvir o banco se deslogar
+        }
+    });
+
+    // Função de enviar formulário de login
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const senha = document.getElementById('senha').value;
+        const btn = document.getElementById('btn-entrar');
+        const msgErro = document.getElementById('msgErroLogin');
+
+        btn.innerText = "Verificando...";
+        btn.disabled = true;
+        msgErro.style.display = 'none';
+
+        try {
+            await signInWithEmailAndPassword(auth, email, senha);
+            // O onAuthStateChanged vai detectar e abrir o painel automaticamente
+        } catch (error) {
+            console.error("Erro no login:", error.code);
+            msgErro.style.display = 'block';
+            if(error.code === 'auth/invalid-credential') {
+                msgErro.innerText = "E-mail ou senha incorretos.";
+            } else {
+                msgErro.innerText = "Ocorreu um erro. Tente novamente.";
+            }
+        } finally {
+            btn.innerText = "Entrar no Painel";
+            btn.disabled = false;
+        }
+    });
+
+    // Função global de Logout (Sair)
+    window.fazerLogout = function() {
+        if(confirm("Deseja realmente sair do sistema?")) {
+            signOut(auth);
+            document.getElementById('email').value = '';
+            document.getElementById('senha').value = '';
+        }
+    };
+
+    // --- INICIALIZAÇÃO DO SISTEMA (Só roda após logar) ---
+    
     let colunas = JSON.parse(localStorage.getItem('kanban_colunas')) || ["Novo Pedido", "Em Análise", "Para Aprovação"];
     colunas = colunas.filter(c => c !== "Resolvido"); 
     
@@ -226,11 +318,31 @@
     let idRelatoAtual = null;
     let chartCategorias = null;
     let chartStatus = null;
-
     let paginaAtual = 1;
     const itensPorPagina = 10;
     let termoPesquisa = "";
 
+    function iniciarSistema() {
+        carregarConfiguracoes();
+
+        // Salva o listener numa variável para poder desligar no logout
+        listenerDeDados = onSnapshot(collection(db, "relatos"), (snapshot) => {
+            relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            relatosGlobal.forEach(r => {
+                if(!colunas.includes(r.status) && r.status !== "Resolvido") {
+                    colunas.push(r.status);
+                }
+            });
+            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+            
+            renderizarBoard();
+            if(document.getElementById('view-dashboard').classList.contains('active')) renderizarDashboard();
+            if(document.getElementById('view-resolvidos').classList.contains('active')) renderizarTabelaResolvidos();
+        });
+    }
+
+    // --- NAVEGAÇÃO ---
     window.mudarAba = function(aba) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
@@ -242,12 +354,9 @@
         if(aba === 'resolvidos') renderizarTabelaResolvidos();
     };
 
-    // --- LÓGICA DE CONFIGURAÇÕES (CMS) ---
+    // --- CONFIGURAÇÕES (CMS) ---
     const categoriasPadrao = [
-        "Demanda Psicossocial", 
-        "Sugestão de Melhoria", 
-        "Reclamação", 
-        "Mediação de Conflito"
+        "Demanda Psicossocial", "Sugestão de Melhoria", "Reclamação", "Mediação de Conflito"
     ];
 
     async function carregarConfiguracoes() {
@@ -258,7 +367,6 @@
                 document.getElementById('configTitulo').value = dados.titulo || "Canal de Comunicação Direta";
                 document.getElementById('configDescricao').value = dados.descricao || "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
                 
-                // Transforma o array do Firebase em um texto com quebra de linha
                 if(dados.categorias && Array.isArray(dados.categorias) && dados.categorias.length > 0) {
                     document.getElementById('configCategorias').value = dados.categorias.join("\n");
                 } else {
@@ -266,15 +374,13 @@
                 }
             } else {
                 document.getElementById('configTitulo').value = "Canal de Comunicação Direta";
-                document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+                document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação.";
                 document.getElementById('configCategorias').value = categoriasPadrao.join("\n");
             }
         } catch (error) {
             console.error("Erro ao carregar textos:", error);
         }
     }
-
-    carregarConfiguracoes();
 
     document.getElementById('btnSalvarConfig').addEventListener('click', async () => {
         const btn = document.getElementById('btnSalvarConfig');
@@ -286,7 +392,6 @@
         const novaDescricao = document.getElementById('configDescricao').value;
         const textoCategorias = document.getElementById('configCategorias').value;
 
-        // Pega o texto, separa por quebras de linha e limpa os espaços vazios
         const novaListaCategorias = textoCategorias.split("\n")
             .map(cat => cat.trim())
             .filter(cat => cat !== "");
@@ -304,28 +409,13 @@
             setTimeout(() => msg.style.display = "none", 4000);
         } catch (error) {
             console.error("Erro ao salvar:", error);
-            alert("Ocorreu um erro ao salvar. Verifique as permissões do Firebase.");
+            alert("Ocorreu um erro ao salvar.");
             btn.innerText = "💾 Salvar Alterações";
             btn.disabled = false;
         }
     });
-    // -------------------------------------
 
-    onSnapshot(collection(db, "relatos"), (snapshot) => {
-        relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        relatosGlobal.forEach(r => {
-            if(!colunas.includes(r.status) && r.status !== "Resolvido") {
-                colunas.push(r.status);
-            }
-        });
-        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-        
-        renderizarBoard();
-        if(document.getElementById('view-dashboard').classList.contains('active')) renderizarDashboard();
-        if(document.getElementById('view-resolvidos').classList.contains('active')) renderizarTabelaResolvidos();
-    });
-
+    // --- QUADRO KANBAN ---
     function renderizarBoard() {
         const board = document.getElementById('board');
         board.innerHTML = '';
@@ -426,6 +516,7 @@
         renderizarBoard();
     };
 
+    // --- MODAL DETALHES ---
     window.abrirModal = function(id) {
         const relato = relatosGlobal.find(r => r.id === id);
         if(!relato) return;
@@ -433,7 +524,6 @@
         idRelatoAtual = id;
         document.getElementById('m-nome').innerText = relato.anonimo ? '👤 Relato Anônimo' : relato.nome;
         document.getElementById('m-categoria').innerText = relato.categoria;
-        
         document.getElementById('m-lotacao').innerText = relato.anonimo ? '' : '📍 Lotação: ' + (relato.lotacao || 'Não informada');
         
         if (relato.anonimo || !relato.telefone || relato.telefone === "Não informado") {
@@ -469,12 +559,13 @@
 
     document.getElementById('btnMarcarResolvido').addEventListener('click', async () => {
         if(!idRelatoAtual) return;
-        if(confirm("Tem certeza que deseja marcar como Resolvido? Ele sairá do Quadro de Demandas.")) {
+        if(confirm("Tem certeza que deseja marcar como Resolvido?")) {
             await updateDoc(doc(db, "relatos", idRelatoAtual), { status: "Resolvido" });
             fecharModal();
         }
     });
 
+    // --- DASHBOARD ---
     function renderizarDashboard() {
         const ativos = relatosGlobal.filter(r => r.status !== "Resolvido");
         const resolvidos = relatosGlobal.filter(r => r.status === "Resolvido");
@@ -490,38 +581,22 @@
         if(chartCategorias) chartCategorias.destroy();
         chartCategorias = new Chart(document.getElementById('graficoCategorias'), {
             type: 'pie',
-            data: {
-                labels: Object.keys(contagemCategorias),
-                datasets: [{
-                    data: Object.values(contagemCategorias),
-                    backgroundColor: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']
-                }]
-            },
+            data: { labels: Object.keys(contagemCategorias), datasets: [{ data: Object.values(contagemCategorias), backgroundColor: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'] }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Demandas por Natureza' } } }
         });
 
         const contagemStatus = {};
-        ativos.forEach(r => {
-            contagemStatus[r.status] = (contagemStatus[r.status] || 0) + 1;
-        });
+        ativos.forEach(r => { contagemStatus[r.status] = (contagemStatus[r.status] || 0) + 1; });
 
         if(chartStatus) chartStatus.destroy();
         chartStatus = new Chart(document.getElementById('graficoStatus'), {
             type: 'bar',
-            data: {
-                labels: Object.keys(contagemStatus),
-                datasets: [{
-                    label: 'Quantidade',
-                    data: Object.values(contagemStatus),
-                    backgroundColor: '#6b21a8'
-                }]
-            },
+            data: { labels: Object.keys(contagemStatus), datasets: [{ label: 'Quantidade', data: Object.values(contagemStatus), backgroundColor: '#6b21a8' }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Demandas por Etapa (Ativas)' }, legend: {display: false} } }
         });
     }
 
-    // --- LÓGICA DE PESQUISA E PAGINAÇÃO ---
-    
+    // --- LISTA DE RESOLVIDOS ---
     document.getElementById('inputPesquisa').addEventListener('input', (e) => {
         termoPesquisa = e.target.value.toLowerCase();
         paginaAtual = 1;
