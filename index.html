@@ -59,13 +59,47 @@
         /* Mensagem de Sucesso (Post-it Azul Marinho Suave) */
         #mensagemSucesso { display: none; background: #eff6ff; color: #1e3a8a; padding: 20px; border-radius: 12px; margin-top: 20px; text-align: center; font-weight: bold; border: 2px dashed #bfdbfe; font-size: 1.1em; }
         
-        /* Ajustes apenas para telas de celular */
+      /* Ajustes refinados para telemóveis */
         @media (max-width: 600px) {
-            .header-logos img { max-height: 60px; }
-            .header-logos { padding-bottom: 10px; margin-bottom: 15px; }
-            .container { padding: 25px 20px; border-radius: 20px; }
-            h2 { font-size: 1.5em; }
-        }
+            body { 
+                padding: 10px; /* Diminui o enchimento para o cartão não ficar apertado */
+            }
+            
+            .container { 
+                padding: 25px 20px; 
+                border-radius: 18px; /* Cantos mais suaves e proporcionais à largura */
+                margin: 10px; /* Cria o efeito flutuante para o fundo aparecer nas laterais */
+                box-shadow: 0 6px 20px rgba(139, 90, 43, 0.15);
+            }
+            
+            .header-logos img { 
+                max-height: 75px; /* Aumenta as logos para garantir a legibilidade */
+            }
+            
+            .header-logos { 
+                padding-bottom: 12px; 
+                margin-bottom: 20px; 
+            }
+            
+            h2 { 
+                font-size: 1.45em; /* Título mais equilibrado para não "gritar" no ecrã */
+                line-height: 1.2;
+            }
+            
+            p.desc { 
+                font-size: 0.95em; 
+                line-height: 1.4; /* Melhora a leitura do texto de acolhimento */
+                margin-bottom: 20px;
+            }
+            
+            .checkbox-group {
+                margin-top: 25px; /* Dá um respiro maior para destacar a opção de anonimato */
+                padding: 12px;
+            }
+
+            input[type="text"], select, textarea {
+                font-size: 16px; /* Evita que o iPhone dê zoom automático ao clicar nos campos */
+            }
     </style>
 </head>
 <body>
