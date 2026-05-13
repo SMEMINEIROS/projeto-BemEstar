@@ -234,7 +234,6 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    // IMPORTANTE: Adicionado o deleteDoc na importação abaixo
     import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
@@ -255,6 +254,7 @@
     const telaLogin = document.getElementById('tela-login');
     const appContent = document.getElementById('app-content');
     let listenerDeDados = null; 
+    let listenerColunas = null;
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -265,6 +265,7 @@
             telaLogin.style.display = 'flex';
             appContent.style.display = 'none';
             if (listenerDeDados) listenerDeDados(); 
+            if (listenerColunas) listenerColunas();
         }
     });
 
@@ -304,9 +305,7 @@
     };
 
     // --- INICIALIZAÇÃO DO SISTEMA ---
-    let colunas = JSON.parse(localStorage.getItem('kanban_colunas')) || ["Novo Pedido", "Em Análise", "Para Aprovação"];
-    colunas = colunas.filter(c => c !== "Resolvido"); 
-    
+    let colunas = [];
     let relatosGlobal = [];
     let idRelatoAtual = null;
     let chartCategorias = null;
@@ -318,15 +317,32 @@
     function iniciarSistema() {
         carregarConfiguracoes();
 
+        // 1. Escutar as Colunas sincronizadas no Firebase
+        listenerColunas = onSnapshot(doc(db, "configuracoes", "kanban"), (docSnap) => {
+            if (docSnap.exists() && docSnap.data().colunas) {
+                colunas = docSnap.data().colunas.filter(c => c !== "Resolvido");
+            } else {
+                colunas = ["Novo Pedido", "Em Análise", "Para Aprovação"];
+            }
+            renderizarBoard();
+        });
+
+        // 2. Escutar os Relatos
         listenerDeDados = onSnapshot(collection(db, "relatos"), (snapshot) => {
             relatosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
+            // Verifica se há status órfãos e adiciona às colunas automaticamente
+            let precisaSalvar = false;
             relatosGlobal.forEach(r => {
-                if(!colunas.includes(r.status) && r.status !== "Resolvido") {
+                if(r.status && !colunas.includes(r.status) && r.status !== "Resolvido") {
                     colunas.push(r.status);
+                    precisaSalvar = true;
                 }
             });
-            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+            
+            if(precisaSalvar) {
+                setDoc(doc(db, "configuracoes", "kanban"), { colunas: colunas }, { merge: true });
+            }
             
             renderizarBoard();
             if(document.getElementById('view-dashboard').classList.contains('active')) renderizarDashboard();
@@ -357,7 +373,7 @@
             if (docSnap.exists()) {
                 const dados = docSnap.data();
                 document.getElementById('configTitulo').value = dados.titulo || "Canal de Comunicação Direta";
-                document.getElementById('configDescricao').value = dados.descricao || "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação. Suas demandas psicossociais e sugestões serão analisadas com discrição.";
+                document.getElementById('configDescricao').value = dados.descricao || "Espaço seguro e sigiloso gerido pela equipa de Bem-Estar da Secretaria de Educação. As suas demandas psicossociais e sugestões serão analisadas com discrição.";
                 
                 if(dados.categorias && Array.isArray(dados.categorias) && dados.categorias.length > 0) {
                     document.getElementById('configCategorias').value = dados.categorias.join("\n");
@@ -366,7 +382,7 @@
                 }
             } else {
                 document.getElementById('configTitulo').value = "Canal de Comunicação Direta";
-                document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipe de Bem-Estar da Secretaria de Educação.";
+                document.getElementById('configDescricao').value = "Espaço seguro e sigiloso gerido pela equipa de Bem-Estar da Secretaria de Educação.";
                 document.getElementById('configCategorias').value = categoriasPadrao.join("\n");
             }
         } catch (error) {
@@ -377,7 +393,7 @@
     document.getElementById('btnSalvarConfig').addEventListener('click', async () => {
         const btn = document.getElementById('btnSalvarConfig');
         const msg = document.getElementById('msgConfigSalva');
-        btn.innerText = "Salvando...";
+        btn.innerText = "A Gravar...";
         btn.disabled = true;
 
         const novoTitulo = document.getElementById('configTitulo').value;
@@ -400,8 +416,8 @@
             msg.style.display = "inline";
             setTimeout(() => msg.style.display = "none", 4000);
         } catch (error) {
-            console.error("Erro ao salvar:", error);
-            alert("Ocorreu um erro ao salvar.");
+            console.error("Erro ao gravar:", error);
+            alert("Ocorreu um erro ao gravar as definições.");
             btn.innerText = "💾 Salvar Alterações";
             btn.disabled = false;
         }
@@ -461,7 +477,7 @@
                     try {
                         await updateDoc(doc(db, "relatos", cardId), { status: novoStatus });
                     } catch (error) {
-                        console.error("Erro:", error);
+                        console.error("Erro ao mover:", error);
                         renderizarBoard();
                     }
                 },
@@ -469,12 +485,12 @@
         });
     }
 
-    window.adicionarColunaPrompt = function() {
+    window.adicionarColunaPrompt = async function() {
         const nova = prompt("Nome da nova coluna:");
-        if (nova && nova.trim() !== "" && !colunas.includes(nova) && nova !== "Resolvido") {
+        if (nova && nova.trim() !== "" && !colunas.includes(nova.trim()) && nova.trim() !== "Resolvido") {
             colunas.push(nova.trim());
-            localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-            renderizarBoard();
+            // Atualiza diretamente no Firebase - todos os PCs receberão a atualização
+            await setDoc(doc(db, "configuracoes", "kanban"), { colunas: colunas }, { merge: true });
         }
     };
 
@@ -482,15 +498,18 @@
         const novoNome = prompt("Novo nome para a coluna:", nomeAntigo);
         if(!novoNome || novoNome.trim() === "" || novoNome === nomeAntigo || novoNome === "Resolvido") return;
         
-        colunas[colunas.indexOf(nomeAntigo)] = novoNome.trim();
-        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
+        const index = colunas.indexOf(nomeAntigo);
+        if(index !== -1) colunas[index] = novoNome.trim();
         
         const batch = writeBatch(db);
+        // Atualiza a coluna no painel (para todos)
+        batch.set(doc(db, "configuracoes", "kanban"), { colunas: colunas }, { merge: true });
+
+        // Atualiza o status dos relatos que estavam na coluna antiga
         relatosGlobal.filter(r => r.status === nomeAntigo).forEach(r => {
             batch.update(doc(db, "relatos", r.id), { status: novoNome.trim() });
         });
         await batch.commit();
-        renderizarBoard();
     };
 
     window.excluirColuna = async function(nome) {
@@ -498,14 +517,14 @@
         
         colunas = colunas.filter(c => c !== nome);
         if(!colunas.includes("Novo Pedido")) colunas.unshift("Novo Pedido");
-        localStorage.setItem('kanban_colunas', JSON.stringify(colunas));
-
+        
         const batch = writeBatch(db);
+        batch.set(doc(db, "configuracoes", "kanban"), { colunas: colunas }, { merge: true });
+
         relatosGlobal.filter(r => r.status === nome).forEach(r => {
             batch.update(doc(db, "relatos", r.id), { status: "Novo Pedido" });
         });
         await batch.commit();
-        renderizarBoard();
     };
 
     // --- MODAL DETALHES ---
