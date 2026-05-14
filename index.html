@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canal de Escuta - Bem-Estar</title>
-        <style>
+    <style>
         /* Importa a fonte arredondada e amigável do Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
-     /* Fundo da tela usando o padrão de ícones (doodles) de educação/saúde */
+        /* Fundo da tela usando o padrão de ícones (doodles) de educação/saúde */
         body {
             font-family: 'Nunito', sans-serif;
-            /* Use a imagem como fundo e uma cor base creme */
             background: #fdf8f1 url('fundo-desenhos.png') repeat;
             margin: 0;
             padding: 20px;
@@ -20,30 +19,35 @@
             color: #333;
             min-height: 100vh; /* Garante que o fundo cubra toda a altura da tela */
         }
+        
         /* O Cartão do formulário com cantos bem arredondados e sombra quente */
         .container { background: white; padding: 35px; border-radius: 24px; box-shadow: 0 10px 30px rgba(139, 90, 43, 0.1); max-width: 600px; width: 100%; position: relative; }
         
-        /* Estilo das Logos */
-        .header-logos { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px dashed #f0e6d2; padding-bottom: 15px; }
-        .header-logos img { max-height: 90px; object-fit: contain; }
+        /* Estilo do Banner Inteligente (Substituiu as logos antigas) */
+        .header-logos { margin-bottom: 25px; }
+        .header-logos img { 
+            width: 100%; 
+            border-radius: 12px; /* Arredonda levemente os cantos do banner */
+            display: block; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* Sombra suave no banner */
+        }
 
-        /* Textos e Títulos usando o Azul Marinho da sua referência */
+        /* Textos e Títulos usando o Azul Marinho */
         h2 { color: #1e3a8a; margin-top: 0; font-weight: 800; font-size: 1.8em; }
         p.desc { color: #52525b; font-size: 1.05em; margin-bottom: 25px; line-height: 1.5; }
         label { display: block; margin: 15px 0 8px; color: #1e3a8a; font-weight: 700; font-size: 0.95em; }
         
-        /* Adicionando ícones decorativos sutis antes dos labels */
+        /* Ícones decorativos sutis antes dos labels */
         label[for="lotacao"]::before { content: '🏫 '; }
         label[for="categoria"]::before { content: '🤝 '; }
         label[for="descricao"]::before { content: '💬 '; }
         
         /* Campos de digitação mais suaves e gordinhos */
         input[type="text"], select, textarea { width: 100%; padding: 12px 15px; border: 2px solid #e4e4e7; border-radius: 12px; box-sizing: border-box; font-family: inherit; font-size: 1em; transition: 0.3s; background-color: #fafafa; }
-        /* Quando clica no campo, a borda fica Azul Marinho */
         input[type="text"]:focus, select:focus, textarea:focus { border-color: #1e3a8a; outline: none; background-color: #fff; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1); }
         textarea { resize: vertical; height: 120px; }
         
-        /* Área do Anonimato - Estilo "Post-it" Verde de Cuidado (Educação/Saúde Mental) */
+        /* Área do Anonimato - Estilo "Post-it" Verde de Cuidado */
         .checkbox-group { display: flex; align-items: center; background: #ecfdf5; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 2px dashed #6ee7b7; transition: 0.3s; }
         .checkbox-group:hover { background: #d1fae5; }
         .checkbox-group input { margin-right: 12px; transform: scale(1.3); accent-color: #059669; cursor: pointer; }
@@ -59,55 +63,47 @@
         /* Mensagem de Sucesso (Post-it Azul Marinho Suave) */
         #mensagemSucesso { display: none; background: #eff6ff; color: #1e3a8a; padding: 20px; border-radius: 12px; margin-top: 20px; text-align: center; font-weight: bold; border: 2px dashed #bfdbfe; font-size: 1.1em; }
         
-      /* Ajustes refinados para telemóveis */
+        /* Ajustes refinados para telemóveis */
         @media (max-width: 600px) {
             body { 
                 padding: 10px; /* Diminui o enchimento para o cartão não ficar apertado */
             }
-            
             .container { 
                 padding: 25px 20px; 
                 border-radius: 18px; /* Cantos mais suaves e proporcionais à largura */
                 margin: 10px; /* Cria o efeito flutuante para o fundo aparecer nas laterais */
                 box-shadow: 0 6px 20px rgba(139, 90, 43, 0.15);
             }
-            
-            .header-logos img { 
-                max-height: 75px; /* Aumenta as logos para garantir a legibilidade */
-            }
-            
             .header-logos { 
-                padding-bottom: 12px; 
                 margin-bottom: 20px; 
             }
-            
             h2 { 
                 font-size: 1.45em; /* Título mais equilibrado para não "gritar" no ecrã */
                 line-height: 1.2;
             }
-            
             p.desc { 
                 font-size: 0.95em; 
                 line-height: 1.4; /* Melhora a leitura do texto de acolhimento */
                 margin-bottom: 20px;
             }
-            
             .checkbox-group {
                 margin-top: 25px; /* Dá um respiro maior para destacar a opção de anonimato */
                 padding: 12px;
             }
-
             input[type="text"], select, textarea {
                 font-size: 16px; /* Evita que o iPhone dê zoom automático ao clicar nos campos */
             }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header-logos">
-        <img src="logo-prefeitura.png" alt="Prefeitura Municipal">
-        <img src="logo-secretaria.png" alt="Secretaria de Educação">
+        <picture>
+            <source media="(max-width: 600px)" srcset="banner-celular.png">
+            <img src="banner-pc.png" alt="Prefeitura de Mineiros e SME">
+        </picture>
     </div>
 
     <h2 id="tituloPagina">Canal de Comunicação Direta</h2>
